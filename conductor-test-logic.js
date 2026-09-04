@@ -1,5 +1,6 @@
 import { supabase } from './supabase-config-test.js';
 import { initPushNotifications } from './push-notifications-test.js';
+import { initTarjetaConductor } from './tarjeta-conductor-test.js';
 
 // Capacitor se inyecta como objeto global (window.Capacitor) dentro de la app nativa.
 // Los plugins ya sincronizados quedan disponibles en window.Capacitor.Plugins — no
@@ -391,6 +392,7 @@ function unlock(driver) {
   setupCheckpointButton();
   setupTurnoState();
   setupReposoState();
+  initTarjetaConductor(driver.id);
   if (window.lucide) lucide.createIcons();
 
   // Notificaciones push forzosas (solo cuando el panel corre como PWA
