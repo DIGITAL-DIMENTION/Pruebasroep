@@ -246,6 +246,43 @@
   @media (prefers-reduced-motion: reduce){
     *{ transition: none !important; animation: none !important; }
   }
+
+  /* ---------- Horarios (ramales/corridas) ---------- */
+  .hz-ramales-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+  @media (max-width:768px){.hz-ramales-grid{grid-template-columns:1fr;}}
+  .hz-ramal-col{background:var(--surface);border:1px solid var(--border);border-radius:.9rem;padding:14px;}
+  .hz-capilla .hz-ramal-name{color:var(--cempasuchil);}
+  .hz-secundaria .hz-ramal-name{color:var(--agave);}
+  .hz-ramal-col.hz-capilla{border-top:3px solid var(--cempasuchil);}
+  .hz-ramal-col.hz-secundaria{border-top:3px solid var(--agave);}
+  .hz-ramal-name{font-weight:700;font-size:16px;}
+  .hz-margen-tag{font-size:11px;padding:3px 9px;border-radius:20px;background:var(--surface-2);color:var(--ink-soft);border:1px solid var(--border);}
+  .hz-interval-row{display:flex;align-items:center;gap:6px;margin-top:10px;flex-wrap:wrap;}
+  .hz-interval-row input[type=number]{width:52px;background:var(--surface-2);border:1px solid var(--border);color:var(--ink);padding:5px 6px;border-radius:6px;font-size:13px;text-align:center;}
+  .hz-preset-btn{background:var(--surface-2);border:1px solid var(--border);color:var(--ink-soft);padding:4px 9px;border-radius:6px;font-size:12px;}
+  .hz-preset-btn.active{color:var(--canvas);background:var(--talavera);border-color:transparent;}
+  .hz-hero-next{margin-top:12px;padding:12px;border-radius:.7rem;background:var(--surface-2);border:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:8px;}
+  .hz-hero-label{font-size:10px;color:var(--agave);font-weight:700;letter-spacing:.3px;}
+  .hz-hero-time{font-size:32px;font-weight:700;line-height:1;color:var(--ink);}
+  .hz-hero-meta{font-size:12px;color:var(--ink-soft);margin-top:2px;}
+  .hz-hero-empty{color:var(--ink-faint);font-size:13px;}
+  .hz-subhead{font-size:11px;color:var(--ink-soft);font-weight:600;margin:14px 0 6px;}
+  .hz-corrida-row{display:grid;grid-template-columns:56px 1fr 1fr auto;gap:8px;align-items:center;padding:7px 0;border-bottom:1px solid var(--border-soft);}
+  .hz-corrida-row:last-child{border-bottom:none;}
+  .hz-corrida-time{font-weight:700;font-size:16px;color:var(--ink);}
+  .hz-corrida-time.manual{color:var(--agave);}
+  .hz-corrida-time.salio{color:var(--ink-faint);text-decoration:line-through;}
+  .hz-sel{width:100%;background:var(--surface-2);border:1px solid var(--border);color:var(--ink);padding:5px 6px;border-radius:6px;font-size:12px;}
+  .hz-row-actions{display:flex;gap:4px;align-items:center;}
+  .hz-icon-btn{background:var(--surface-2);border:1px solid var(--border);color:var(--ink-soft);width:26px;height:26px;border-radius:6px;display:flex;align-items:center;justify-content:center;}
+  .hz-icon-btn.hz-go:hover{color:var(--agave);border-color:var(--agave);}
+  .hz-vuelta-input{width:64px;background:var(--surface-2);border:1px solid var(--border);color:var(--ink);padding:4px 6px;border-radius:6px;font-size:11px;}
+  .hz-badge{padding:2px 8px;border-radius:20px;font-size:10px;font-weight:600;white-space:nowrap;}
+  .hz-badge.enruta{background:rgba(63,176,240,.14);color:var(--talavera);}
+  .hz-badge.ok{background:rgba(47,217,138,.14);color:var(--agave);}
+  .hz-add-row{margin-top:10px;}
+  .hz-btn-add{width:100%;background:var(--surface-2);border:1px dashed var(--border);color:var(--ink-soft);padding:8px;border-radius:.6rem;font-size:12.5px;}
+  .hz-empty-note{color:var(--ink-faint);font-size:12px;padding:6px 0;}
 </style>
 </head>
 <body class="font-body bg-grid">
@@ -296,6 +333,7 @@
 
     <a href="#registro" class="nav-item active flex items-center gap-2.5 px-3 py-2.5 text-sm font-semibold"><i data-lucide="alert-triangle" class="w-4 h-4"></i> Incidencias</a>
     <a href="#conductores" class="nav-item flex items-center gap-2.5 px-3 py-2.5 text-sm font-semibold"><i data-lucide="users" class="w-4 h-4"></i> Conductores</a>
+    <a href="#horarios" class="nav-item flex items-center gap-2.5 px-3 py-2.5 text-sm font-semibold"><i data-lucide="clock" class="w-4 h-4"></i> Horarios</a>
     <a href="mapa-vivo.html" target="_blank" rel="noopener" class="nav-item flex items-center gap-2.5 px-3 py-2.5 text-sm font-semibold"><i data-lucide="map" class="w-4 h-4"></i> Mapa <i data-lucide="external-link" class="w-3 h-3 ml-auto opacity-60"></i></a>
     <a href="#avisos" class="nav-item flex items-center gap-2.5 px-3 py-2.5 text-sm font-semibold"><i data-lucide="flag" class="w-4 h-4"></i> Avisos</a>
     <a href="#alertas" class="nav-item flex items-center gap-2.5 px-3 py-2.5 text-sm font-semibold"><i data-lucide="bell" class="w-4 h-4"></i> Alertas</a>
@@ -394,6 +432,12 @@
       </div>
     </section>
 
+    <!-- HORARIOS: cola de salidas por ramal, alimenta la tarjeta del conductor -->
+    <section id="horarios" class="scroll-mt-24">
+      <h2 class="font-display font-semibold text-sm uppercase tracking-wide mb-2 flex items-center gap-1.5" style="color:var(--ink-soft);"><i data-lucide="clock" class="w-4 h-4"></i> Horarios</h2>
+      <div id="horariosGrid" class="hz-ramales-grid"></div>
+    </section>
+
     <!-- MAPA (solo en celular; en escritorio "Mapa" abre mapa-vivo.html en una pestaña aparte) -->
     <section id="mapa" class="card overflow-hidden scroll-mt-24 md:hidden">
       <div class="px-4 pt-4 pb-1">
@@ -430,6 +474,7 @@
 
   <a href="#registro" class="mobile-nav-item flex items-center gap-2.5 px-3 py-2.5 text-sm font-semibold"><i data-lucide="alert-triangle" class="w-4 h-4"></i> Incidencias</a>
   <a href="#conductores" class="mobile-nav-item flex items-center gap-2.5 px-3 py-2.5 text-sm font-semibold"><i data-lucide="users" class="w-4 h-4"></i> Conductores</a>
+  <a href="#horarios" class="mobile-nav-item flex items-center gap-2.5 px-3 py-2.5 text-sm font-semibold"><i data-lucide="clock" class="w-4 h-4"></i> Horarios</a>
   <a href="#mapa" class="mobile-nav-item flex items-center gap-2.5 px-3 py-2.5 text-sm font-semibold"><i data-lucide="map" class="w-4 h-4"></i> Mapa</a>
   <a href="#avisos" class="mobile-nav-item flex items-center gap-2.5 px-3 py-2.5 text-sm font-semibold"><i data-lucide="flag" class="w-4 h-4"></i> Avisos</a>
   <a href="#alertas" class="mobile-nav-item flex items-center gap-2.5 px-3 py-2.5 text-sm font-semibold"><i data-lucide="bell" class="w-4 h-4"></i> Alertas</a>
