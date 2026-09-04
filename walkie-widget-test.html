@@ -830,7 +830,12 @@
         setStatus('En espera — mantén pulsado para hablar', true);
         log('Conectado a la ruta "' + code + '".');
       });
-      adminCall.on('close', () => { log('El dueño cerró la ruta.'); setStatus('Ruta cerrada', 'warn'); });
+      adminCall.on('close', () => {
+        log('El dueño cerró la ruta. Buscándolo de nuevo…');
+        setStatus('Reconectando con el dueño…', 'warn');
+        peerStateEl.textContent = 'RECONECTANDO';
+        scheduleAdminReconnect(code, asRole);
+      });
       adminCall.on('error', () => log('Error en la conexión de audio.'));
 
       screenLabel.textContent = 'RUTA';
@@ -844,9 +849,25 @@
       };
       log('Error: ' + (messages[err.type] || err.type));
       setStatus('Esperando al dueño…', 'warn');
+      peerStateEl.textContent = 'RECONECTANDO';
       // Reintenta solo en unos segundos — el dueño puede abrir su radio después.
-      setTimeout(() => { if(routeCode === null) joinRoom(code, asRole); }, 6000);
+      scheduleAdminReconnect(code, asRole);
     });
+  }
+
+  // ---------- Reintento automático hacia el dueño (checador/conductor) ----------
+  // Cubre dos casos: el dueño todavía no abre su radio, y el dueño se cayó
+  // (recargó su panel, perdió internet, etc.) después de ya estar conectados.
+  let adminReconnectTimer = null;
+  function scheduleAdminReconnect(code, asRole){
+    if(adminReconnectTimer) return; // ya hay un reintento programado, no dupliques
+    routeCode = null;
+    adminReconnectTimer = setTimeout(() => {
+      adminReconnectTimer = null;
+      if(peer){ try{ peer.destroy(); }catch(e){} peer = null; }
+      if(remoteAudioEl){ remoteAudioEl.remove(); remoteAudioEl = null; }
+      joinRoom(code, asRole);
+    }, 5000);
   }
 
   function renderCheckerRoster(list){
@@ -881,6 +902,7 @@
   // ---------- Reconexión automática cuando el dueño cambia el código ----------
   async function reconnectWithNewCode(newCode){
     log('El dueño cambió el código de ruta. Reconectando…');
+    if(adminReconnectTimer){ clearTimeout(adminReconnectTimer); adminReconnectTimer = null; }
     if(peer){ try{ peer.destroy(); }catch(e){} peer = null; }
     if(remoteAudioEl){ remoteAudioEl.remove(); remoteAudioEl = null; }
     routeCode = null;
