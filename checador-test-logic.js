@@ -1,5 +1,6 @@
 import { supabase } from './supabase-config-test.js';
 import { initPushNotifications } from './push-notifications-test.js';
+import { initHorarios } from './horarios-test-logic.js';
 
 // ----- HELPER: enganchar eventos sin tronar si el elemento no existe -----
 function on(el, event, handler, label) {
@@ -103,6 +104,7 @@ function unlock(checador) {
   const isDesktop = window.matchMedia('(min-width: 768px)').matches;
   if (!isDesktop && !mapInitialized) initMap();
   initFleetRealtimeListeners();
+  initHorarios();
 
   if (window.lucide) lucide.createIcons();
 }
