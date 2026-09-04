@@ -24,7 +24,7 @@
 // el push real — las alertas solo se seguirán viendo mientras el panel esté
 // abierto en pantalla, como hasta ahora.
 
-import { supabase } from './supabase-config.js';
+import { supabase } from './supabase-config-test.js';
 
 // 🔑 Pega aquí tu VAPID PUBLIC KEY real (paso 1 y 2 de arriba)
 const VAPID_PUBLIC_KEY = 'BDZ7Gye3tdi9bpq-6ynvZWdBen_HywwbOMwl2zx8Iom4zzyOyiMpvKewUsG8t-ITnS6WaUVXyT9oKG40b7KFKaA';
