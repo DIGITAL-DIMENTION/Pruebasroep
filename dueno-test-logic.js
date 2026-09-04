@@ -1,5 +1,5 @@
 import { supabase } from './supabase-config-test.js';
-import { initPushNotifications } from './push-notifications.js';
+import { initPushNotifications } from './push-notifications-test.js';
 
 let currentUser = null;
 let currentOwner = null;
