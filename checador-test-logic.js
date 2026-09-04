@@ -1,5 +1,5 @@
 import { supabase } from './supabase-config-test.js';
-import { initPushNotifications } from './push-notifications.js';
+import { initPushNotifications } from './push-notifications-test.js';
 
 // ----- HELPER: enganchar eventos sin tronar si el elemento no existe -----
 function on(el, event, handler, label) {
