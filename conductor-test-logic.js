@@ -1,5 +1,5 @@
 import { supabase } from './supabase-config-test.js';
-import { initPushNotifications } from './push-notifications.js';
+import { initPushNotifications } from './push-notifications-test.js';
 
 // Capacitor se inyecta como objeto global (window.Capacitor) dentro de la app nativa.
 // Los plugins ya sincronizados quedan disponibles en window.Capacitor.Plugins — no
