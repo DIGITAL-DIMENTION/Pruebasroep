@@ -221,7 +221,10 @@ export function initTarjetaConductor(driverId) {
       loadYRender(driverId);
     })
     .subscribe();
-  // Respaldo: refresca sola cada pocos segundos, no depende solo del
-  // realtime — así aunque algo falle en la suscripción, el conductor la ve.
-  setInterval(() => loadYRender(driverId), 8000);
+  // Respaldo: refresca sola de vez en cuando, no depende solo del
+  // realtime — así aunque algo falle en la suscripción, el conductor la ve
+  // tarde o temprano. 45s en vez de cada pocos segundos porque esto es
+  // nada más un respaldo (el tiempo real ya avisa al instante) y así no
+  // gasta datos de más a lo tonto durante todo el turno.
+  setInterval(() => loadYRender(driverId), 45000);
 }
