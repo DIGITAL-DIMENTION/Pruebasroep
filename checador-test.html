@@ -274,6 +274,7 @@
   .hz-next-tag{display:block;font-size:9px;font-weight:700;color:var(--agave);}
   .hz-sel{width:100%;background:var(--surface-2);border:1px solid var(--border);color:var(--ink);padding:4px 5px;border-radius:6px;font-size:12px;max-width:110px;}
   .hz-empty-note{color:var(--ink-faint);font-size:12px;padding:10px;text-align:center;}
+  .hz-btn-generar{display:block;margin:0 auto 10px;background:var(--surface-2);border:1px dashed var(--border);color:var(--ink-soft);padding:6px 14px;border-radius:.5rem;font-size:12px;}
 </style>
 </head>
 <body class="font-body bg-grid">
@@ -425,7 +426,11 @@
 
     <!-- HORARIOS: cola de salidas por ramal, alimenta la tarjeta del conductor -->
     <section id="horarios" class="scroll-mt-24">
-      <h2 class="font-display font-semibold text-sm uppercase tracking-wide mb-2 flex items-center gap-1.5" style="color:var(--ink-soft);"><i data-lucide="clock" class="w-4 h-4"></i> Horarios</h2>
+      <div class="flex items-center justify-between mb-2">
+        <h2 class="font-display font-semibold text-sm uppercase tracking-wide flex items-center gap-1.5" style="color:var(--ink-soft);"><i data-lucide="clock" class="w-4 h-4"></i> Horarios</h2>
+        <button type="button" id="confirmarHorariosBtn" class="text-xs font-semibold px-3 py-1.5 rounded-full" style="background:var(--talavera);color:var(--canvas);">Confirmar horarios</button>
+      </div>
+      <div id="horariosConfirmadoMsg" class="text-xs hidden mb-2" style="color:var(--agave);">Horarios confirmados y enviados a los conductores ✓</div>
       <div id="horariosGrid" class="hz-ramales-grid"></div>
     </section>
 
