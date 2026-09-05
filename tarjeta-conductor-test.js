@@ -32,14 +32,16 @@ function ensureTarjetaMount() {
       #miTarjetaHoy{margin:0 0 14px;}
       #miTarjetaHoy .mt-card{background:var(--surface);border:1px solid var(--border-soft);border-radius:1rem;padding:14px 16px;}
       #miTarjetaHoy .mt-title{font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--ink-soft);margin-bottom:8px;}
-      #miTarjetaHoy .mt-row{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border-soft);}
-      #miTarjetaHoy .mt-row:last-child{border-bottom:none;}
-      #miTarjetaHoy .mt-time{font-weight:700;font-size:17px;color:var(--ink);}
+      #miTarjetaHoy table{width:100%;border-collapse:collapse;}
+      #miTarjetaHoy th{text-align:left;font-size:10px;font-weight:600;color:var(--ink-faint);text-transform:uppercase;letter-spacing:.03em;padding:4px 6px;border-bottom:1px solid var(--border-soft);}
+      #miTarjetaHoy th.mt-th-r,#miTarjetaHoy td.mt-td-r{text-align:right;}
+      #miTarjetaHoy td{padding:8px 6px;border-bottom:1px solid var(--border-soft);font-size:14px;color:var(--ink);}
+      #miTarjetaHoy tr:last-child td{border-bottom:none;}
       #miTarjetaHoy .mt-time.pasada{color:var(--ink-faint);text-decoration:line-through;}
-      #miTarjetaHoy .mt-meta{font-size:12px;color:var(--ink-soft);text-align:right;}
-      #miTarjetaHoy .mt-dot{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:6px;}
+      #miTarjetaHoy .mt-ramal{font-size:11px;color:var(--ink-soft);white-space:nowrap;}
+      #miTarjetaHoy .mt-dot{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:5px;}
       #miTarjetaHoy .mt-empty{font-size:13px;color:var(--ink-faint);text-align:center;padding:8px 0;}
-      #miTarjetaHoy .mt-next-tag{font-size:10px;font-weight:700;color:var(--agave);}
+      #miTarjetaHoy .mt-next-tag{font-size:9px;font-weight:700;color:var(--agave);display:block;margin-top:2px;}
     </style>
     <div class="mt-card">
       <div class="mt-title">Mi horario de hoy</div>
@@ -62,22 +64,27 @@ function renderTarjeta(driverId, corridas) {
   wrap.classList.remove('hidden');
   const now = new Date();
   const nowMin = now.getHours() * 60 + now.getMinutes();
-  body.innerHTML = corridas.map((c) => {
-    const pasada = c.estado === 'salio' || c.estado === 'regresada';
-    const esSiguiente = c.estado === 'siguiente';
+  const siguienteIdx = corridas.findIndex((c) => c.hora_salida >= nowMin);
+  const filas = corridas.map((c, i) => {
+    const pasada = c.hora_salida < nowMin;
+    const esSiguiente = i === siguienteIdx;
     return `
-      <div class="mt-row">
-        <div>
-          <div class="mt-time ${pasada ? 'pasada' : ''}">${formatHora(c.hora_salida)}</div>
-        </div>
-        <div class="mt-meta">
-          <span class="mt-dot" style="background:${ramalColorVar(c.ramal)}"></span>${ramalNombre(c.ramal)}
-          ${esSiguiente ? '<div class="mt-next-tag">SIGUIENTE</div>' : ''}
-          ${c.hora_regreso != null ? `<div>regresa ${formatHora(c.hora_regreso)}</div>` : ''}
-        </div>
-      </div>
+      <tr>
+        <td>
+          <span class="mt-ramal"><span class="mt-dot" style="background:${ramalColorVar(c.ramal)}"></span>${ramalNombre(c.ramal)}</span>
+          ${esSiguiente ? '<span class="mt-next-tag">SIGUIENTE</span>' : ''}
+        </td>
+        <td class="mt-td-r"><span class="mt-time ${pasada ? 'pasada' : ''}">${formatHora(c.hora_salida)}</span></td>
+        <td class="mt-td-r"><span class="mt-time ${pasada ? 'pasada' : ''}">${formatHora(c.hora_llega)}</span></td>
+      </tr>
     `;
   }).join('');
+  body.innerHTML = `
+    <table>
+      <thead><tr><th>Ramal</th><th class="mt-th-r">Sales de base</th><th class="mt-th-r">Llegas a base</th></tr></thead>
+      <tbody>${filas}</tbody>
+    </table>
+  `;
 }
 
 async function loadYRender(driverId) {
@@ -101,4 +108,8 @@ export function initTarjetaConductor(driverId) {
       loadYRender(driverId);
     })
     .subscribe();
+  // Respaldo: si el panel se queda abierto toda la noche sin que se dispare
+  // el realtime, esto asegura que a partir de la medianoche la tarjeta
+  // también se refresque sola y deje de mostrar las corridas de ayer.
+  setInterval(() => loadYRender(driverId), 60000);
 }
