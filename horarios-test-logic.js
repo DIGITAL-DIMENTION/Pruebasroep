@@ -104,11 +104,12 @@ async function regenerarRamal(key) {
   }));
 
   const { error: upErr } = await supabase.from('corridas').upsert(rows, { onConflict: 'ramal,fecha,slot_index' });
-  if (upErr) console.error('Error regenerando tabla:', upErr);
+  if (upErr) { console.error('Error regenerando tabla:', upErr); throw upErr; }
 
   if (existentes.length > times.length) {
-    await supabase.from('corridas').delete()
+    const { error: delErr } = await supabase.from('corridas').delete()
       .eq('ramal', key).eq('fecha', hoy).gte('slot_index', times.length);
+    if (delErr) console.error('Error limpiando renglones sobrantes:', delErr);
   }
 
   await loadCorridasHoy();
@@ -126,7 +127,13 @@ async function recalcularLlegadas(key) {
 
 async function ensureTablasGeneradas() {
   for (const key of RAMALES) {
-    if (corridasPorRamal[key].length === 0) await regenerarRamal(key);
+    if (corridasPorRamal[key].length === 0) {
+      try {
+        await regenerarRamal(key);
+      } catch (err) {
+        console.error(`[horarios] No se pudo generar la tabla de "${key}" sola:`, err);
+      }
+    }
   }
 }
 
@@ -160,8 +167,21 @@ function conductorOptions(selectedId) {
 function renderHorarios() {
   const grid = document.getElementById('horariosGrid');
   if (!grid) return;
+  // Guarda cuánto había bajado cada tabla antes de redibujar, para no
+  // regresarlo a la fila 1 cada vez que llega una actualización.
+  const scrollPos = {};
+  RAMALES.forEach((key) => {
+    const wrap = grid.querySelector(`.hz-table-wrap[data-wrap="${key}"]`);
+    if (wrap) scrollPos[key] = wrap.scrollTop;
+  });
+
   grid.innerHTML = '';
   RAMALES.forEach((key) => grid.appendChild(renderRamalCol(key)));
+
+  RAMALES.forEach((key) => {
+    const wrap = grid.querySelector(`.hz-table-wrap[data-wrap="${key}"]`);
+    if (wrap && scrollPos[key]) wrap.scrollTop = scrollPos[key];
+  });
   if (window.lucide) lucide.createIcons();
 }
 
@@ -183,7 +203,7 @@ function renderRamalCol(key) {
         <label>vuelta redonda <input type="number" min="1" class="hz-cfg-input" data-ramal="${key}" data-field="tiempo_vuelta" value="${cfg.tiempo_vuelta}"> min</label>
       </div>
     </div>
-    <div class="hz-table-wrap">
+    <div class="hz-table-wrap" data-wrap="${key}">
       <table class="hz-table">
         <thead><tr><th>Sale</th><th>Llega</th><th>Unidad</th><th>Conductor</th></tr></thead>
         <tbody data-body="${key}"></tbody>
@@ -195,7 +215,8 @@ function renderRamalCol(key) {
   lista.forEach((c, i) => tbody.appendChild(renderCorridaRow(key, c, i === siguienteIdx, c.hora_salida < now)));
   if (lista.length === 0) {
     const tr = document.createElement('tr');
-    tr.innerHTML = '<td colspan="4" class="hz-empty-note">Sin tabla generada todavía.</td>';
+    tr.innerHTML = `<td colspan="4"><div class="hz-empty-note">Sin tabla generada todavía.</div>
+      <button type="button" class="hz-btn-generar" data-action="generar-tabla" data-ramal="${key}">Generar tabla</button></td>`;
     tbody.appendChild(tr);
   }
 
@@ -272,6 +293,53 @@ function handleHorariosSelectChange(e) {
   if (c) { c[t.dataset.field] = t.value || null; queueSave(c); }
 }
 
+async function handleHorariosClick(e) {
+  const t = e.target.closest('[data-action]');
+  if (!t || !document.getElementById('horarios')?.contains(t)) return;
+
+  if (t.dataset.action === 'generar-tabla') {
+    t.disabled = true; t.textContent = 'Generando…';
+    try {
+      await regenerarRamal(t.dataset.ramal);
+      renderHorarios();
+    } catch (err) {
+      alert('No se pudo generar la tabla. Revisa tu conexión e intenta de nuevo.');
+      console.error(err);
+      renderHorarios();
+    }
+  }
+}
+
+// "Confirmar horarios": vuelve a guardar cada renglón (toca updated_at) para
+// que el cambio llegue seguro a las tarjetas de los conductores aunque el
+// realtime se haya quedado dormido, y avisa visualmente que ya se mandó.
+async function confirmarHorarios() {
+  const btn = document.getElementById('confirmarHorariosBtn');
+  const msg = document.getElementById('horariosConfirmadoMsg');
+  if (btn) { btn.disabled = true; btn.textContent = 'Confirmando…'; }
+  try {
+    const updates = [];
+    RAMALES.forEach((key) => {
+      corridasPorRamal[key].forEach((c) => {
+        updates.push(
+          supabase.from('corridas').update({
+            unit_id: c.unit_id, driver_id: c.driver_id,
+            hora_salida: c.hora_salida, hora_llega: c.hora_llega,
+            updated_at: new Date().toISOString(),
+          }).eq('id', c.id)
+        );
+      });
+    });
+    await Promise.all(updates);
+    if (msg) { msg.classList.remove('hidden'); setTimeout(() => msg.classList.add('hidden'), 4000); }
+  } catch (err) {
+    console.error('Error confirmando horarios:', err);
+    alert('No se pudo confirmar. Revisa tu conexión e intenta de nuevo.');
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = 'Confirmar horarios'; }
+  }
+}
+
 /* ======================= RELOJ ======================= */
 async function tickHorarios() {
   await checkDayRollover();
@@ -286,6 +354,8 @@ export async function initHorarios() {
   renderHorarios();
   document.addEventListener('change', handleHorariosChange);
   document.addEventListener('change', handleHorariosSelectChange);
+  document.addEventListener('click', handleHorariosClick);
+  document.getElementById('confirmarHorariosBtn')?.addEventListener('click', confirmarHorarios);
   initCorridasRealtime(() => renderHorarios());
   setInterval(tickHorarios, 20000);
 }
