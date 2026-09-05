@@ -937,6 +937,39 @@
   pttBtn.addEventListener('pointerdown', e => { e.preventDefault(); pttBtn.setPointerCapture(e.pointerId); setTx(true); });
   pttBtn.addEventListener('pointerup', () => setTx(false));
   pttBtn.addEventListener('pointercancel', () => setTx(false));
+
+  // Seguro: si el cel se bloquea o la app pasa a segundo plano justo
+  // mientras tenías el botón apretado, el navegador a veces nunca manda el
+  // "soltaste" — y te quedas mudo para siempre (transmitiendo sin querer y
+  // sin poder oír a los demás). Esto suelta el botón solo en cuanto la
+  // pantalla se apaga o cambias de app, como si lo hubieras soltado a mano.
+  document.addEventListener('visibilitychange', () => { if(document.hidden) setTx(false); });
+  window.addEventListener('blur', () => setTx(false));
+  window.addEventListener('pagehide', () => setTx(false));
+
+  // Respaldo extra: si por lo que sea el botón no está presionado pero el
+  // audio que escuchas se quedó muteado (o al revés), lo corrige solo cada
+  // pocos segundos.
+  setInterval(() => {
+    const presionado = pttBtn.classList.contains('pressed');
+    if(role !== 'admin' && remoteAudioEl && remoteAudioEl.muted !== presionado){
+      remoteAudioEl.muted = presionado;
+    }
+  }, 4000);
+
+  // API para que la página que lo embebe (checador/conductor/dueño) controle
+  // "hablar" directo con un botón propio, sin tener que abrir este panel.
+  window.RSSWalkie = {
+    setTx,
+    getStatus(){
+      return {
+        connected: !!routeCode,
+        muted: mutedByAdmin,
+        pressed: pttBtn.classList.contains('pressed'),
+        peerState: peerStateEl ? peerStateEl.textContent : ''
+      };
+    }
+  };
   pttBtn.addEventListener('pointerleave', e => { if(e.buttons === 1) setTx(false); });
   window.addEventListener('keydown', e => {
     if(e.code === 'Space' && !e.repeat && !['INPUT'].includes(document.activeElement.tagName)){ e.preventDefault(); setTx(true); }
