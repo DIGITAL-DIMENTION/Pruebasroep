@@ -922,6 +922,11 @@ async function stopSharing() {
   toggleLabel.innerHTML = 'Encender<br>ubicación';
   statusText.textContent = 'Presiona el botón para activar tu ubicación en el mapa.';
 
+  // Si el radio estaba conectado, se apaga junto con la ubicación: ya
+  // terminaste tu turno, no tiene caso que el radio siga usando datos y
+  // batería solo. En cuanto vuelvas a tocar HABLAR se reconecta solo.
+  if (window.__rssWalkieStop) window.__rssWalkieStop();
+
   await sendConfiable({ type: 'live_location_off', driverId: currentDriver.id });
 }
 
