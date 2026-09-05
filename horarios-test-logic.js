@@ -77,38 +77,52 @@ function initCorridasRealtime(onChange) {
 }
 
 /* ======================= GENERACIÓN DE LA TABLA ======================= */
-function slotTimes(cfg) {
-  const times = [];
-  for (let t = cfg.hora_inicio; t <= cfg.hora_fin; t += cfg.intervalo) times.push(t);
-  return times;
-}
 
 // Reconstruye la tabla completa del ramal según su config actual. Conserva
 // la unidad/conductor que ya tenía cada renglón (por posición), nada más
 // mueve los horarios. Si el nuevo intervalo da menos renglones que antes,
 // sobran filas viejas — se borran.
+// Reconstruye la tabla del ramal según su config actual. Lo que ya pasó
+// (hora_salida menor a ahorita) se queda tal cual quedó registrado — nunca
+// se le mueve la hora a algo que ya salió, ni al checador ni al conductor.
+// Nada más se recorren/regeneran los horarios que todavía faltan por salir.
 async function regenerarRamal(key) {
   const cfg = ramalesConfig[key];
-  const times = slotTimes(cfg);
-  const existentes = corridasPorRamal[key];
   const hoy = todayStr();
+  const now = nowMinutes();
+  const existentes = corridasPorRamal[key]; // ya vienen ordenadas por slot_index
 
-  const rows = times.map((horaSalida, i) => ({
+  const pasadas = existentes.filter((c) => c.hora_salida < now);
+  const futurasViejas = existentes.filter((c) => c.hora_salida >= now);
+
+  // Punto de arranque para lo nuevo: si ya hubo salidas hoy, sigue el
+  // intervalo justo después de la última — si no, arranca desde "desde".
+  const inicioFuturo = pasadas.length
+    ? pasadas[pasadas.length - 1].hora_salida + cfg.intervalo
+    : cfg.hora_inicio;
+
+  const timesFuturas = [];
+  for (let t = Math.max(inicioFuturo, cfg.hora_inicio); t <= cfg.hora_fin; t += cfg.intervalo) timesFuturas.push(t);
+
+  const rows = timesFuturas.map((horaSalida, i) => ({
     ramal: key,
-    slot_index: i,
+    slot_index: pasadas.length + i,
     fecha: hoy,
-    unit_id: existentes[i]?.unit_id ?? null,
-    driver_id: existentes[i]?.driver_id ?? null,
+    unit_id: futurasViejas[i]?.unit_id ?? null,
+    driver_id: futurasViejas[i]?.driver_id ?? null,
     hora_salida: horaSalida,
     hora_llega: horaSalida + cfg.tiempo_vuelta,
   }));
 
-  const { error: upErr } = await supabase.from('corridas').upsert(rows, { onConflict: 'ramal,fecha,slot_index' });
-  if (upErr) { console.error('Error regenerando tabla:', upErr); throw upErr; }
+  if (rows.length) {
+    const { error: upErr } = await supabase.from('corridas').upsert(rows, { onConflict: 'ramal,fecha,slot_index' });
+    if (upErr) { console.error('Error regenerando tabla:', upErr); throw upErr; }
+  }
 
-  if (existentes.length > times.length) {
+  const totalNuevo = pasadas.length + timesFuturas.length;
+  if (existentes.length > totalNuevo) {
     const { error: delErr } = await supabase.from('corridas').delete()
-      .eq('ramal', key).eq('fecha', hoy).gte('slot_index', times.length);
+      .eq('ramal', key).eq('fecha', hoy).gte('slot_index', totalNuevo);
     if (delErr) console.error('Error limpiando renglones sobrantes:', delErr);
   }
 
