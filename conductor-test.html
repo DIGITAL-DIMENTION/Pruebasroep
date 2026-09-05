@@ -93,12 +93,17 @@
   .btn-lift:hover{ transform: translateY(-1px); box-shadow: var(--shadow-md); }
   .btn-lift:active{ transform: translateY(0) scale(.97); }
 
+  #toggleRow{
+    display:flex; align-items:center; justify-content:center; gap:14px;
+    flex-wrap:wrap; width:100%;
+  }
   #toggleBtn{
-    width:190px; height:190px; border-radius:50%;
+    width:clamp(132px, 40vw, 190px); height:clamp(132px, 40vw, 190px); border-radius:50%;
     display:flex; flex-direction:column; align-items:center; justify-content:center;
     border:1px solid var(--border); background:var(--surface); box-shadow:var(--shadow);
     font-family:'Sora', sans-serif; font-weight:600; color:var(--ink);
     transition: all .3s cubic-bezier(.2,.8,.2,1);
+    flex-shrink:0;
   }
   #toggleBtn:hover{ transform: translateY(-2px); box-shadow: var(--shadow-md); }
   #toggleBtn:active{ transform: scale(.98); }
@@ -732,10 +737,14 @@
 
   <div class="w-full flex flex-col items-center px-4 pt-5 md:pt-8 max-w-3xl">
 
-    <button id="toggleBtn">
-      <span class="pulseDot"><i id="toggleDotIcon" data-lucide="power"></i></span>
-      <span id="toggleLabel" class="text-sm">Encender<br>ubicación</span>
-    </button>
+    <div id="toggleRow">
+      <button id="toggleBtn">
+        <span class="pulseDot"><i id="toggleDotIcon" data-lucide="power"></i></span>
+        <span id="toggleLabel" class="text-sm">Encender<br>ubicación</span>
+      </button>
+      <!-- La tarjeta "Mi horario de hoy" (tarjeta-conductor-test.js) se
+           inserta aquí, al lado del botón, para que quepa bien en celular. -->
+    </div>
     <p id="statusText" class="text-sm mt-4 text-center max-w-xs" style="color:var(--ink-soft);">
       Presiona el botón para que tu combi esté en tiempo real en el mapa.
     </p>
