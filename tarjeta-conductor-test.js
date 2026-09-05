@@ -27,10 +27,13 @@ function ensureTarjetaMount() {
   el = document.createElement('div');
   el.id = 'miTarjetaHoy';
   el.className = 'hidden';
+  // Estilos forzados en el propio elemento (con !important) para que no le
+  // pueda pegar ningún estilo de al lado del panel — siempre ocupa todo el
+  // ancho, en su lugar normal, nunca flotando ni encimado.
+  el.style.cssText = 'position:static !important; float:none !important; width:100% !important; max-width:100% !important; box-sizing:border-box !important; margin:0 0 14px !important;';
   el.innerHTML = `
     <style>
-      #miTarjetaHoy{margin:0 0 14px;}
-      #miTarjetaHoy .mt-card{background:var(--surface);border:1px solid var(--border-soft);border-radius:1rem;padding:14px 16px;}
+      #miTarjetaHoy .mt-card{width:100%;box-sizing:border-box;background:var(--surface);border:1px solid var(--border-soft);border-radius:1rem;padding:14px 16px;}
       #miTarjetaHoy .mt-title{font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--ink-soft);margin-bottom:8px;}
       #miTarjetaHoy table{width:100%;border-collapse:collapse;}
       #miTarjetaHoy th{text-align:left;font-size:10px;font-weight:600;color:var(--ink-faint);text-transform:uppercase;letter-spacing:.03em;padding:4px 6px;border-bottom:1px solid var(--border-soft);}
@@ -48,8 +51,13 @@ function ensureTarjetaMount() {
       <div id="miTarjetaHoyBody"></div>
     </div>
   `;
-  const anchor = document.getElementById('mainScreen');
-  if (anchor) anchor.insertBefore(el, anchor.firstChild);
+  // Se mete justo después de la barra de arriba (header), nunca como
+  // "primer hijo a ciegas" — así siempre cae en el lugar correcto sin
+  // importar qué tanto cambie el resto del panel.
+  const main = document.getElementById('mainScreen');
+  const header = main ? main.querySelector('header') : null;
+  if (header) header.insertAdjacentElement('afterend', el);
+  else if (main) main.insertBefore(el, main.firstChild);
   return el;
 }
 
