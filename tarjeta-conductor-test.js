@@ -108,8 +108,7 @@ export function initTarjetaConductor(driverId) {
       loadYRender(driverId);
     })
     .subscribe();
-  // Respaldo: si el panel se queda abierto toda la noche sin que se dispare
-  // el realtime, esto asegura que a partir de la medianoche la tarjeta
-  // también se refresque sola y deje de mostrar las corridas de ayer.
-  setInterval(() => loadYRender(driverId), 60000);
+  // Respaldo: refresca sola cada pocos segundos, no depende solo del
+  // realtime — así aunque algo falle en la suscripción, el conductor la ve.
+  setInterval(() => loadYRender(driverId), 8000);
 }
