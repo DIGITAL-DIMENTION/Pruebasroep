@@ -1098,49 +1098,68 @@
   });
 </script>
 
-<!-- ===== WALKIE-TALKIE (radio) — botón flotante ===== -->
-<button id="walkieToggleBtn" aria-label="Abrir radio" style="
+<!-- ===== WALKIE-TALKIE (radio) — botón de hablar directo, sin panel que abrir ===== -->
+<button id="walkiePttBtn" aria-label="Hablar por radio" style="
   position:fixed; left:16px; bottom:16px; z-index:9999;
-  width:56px; height:56px; border-radius:999px; border:none;
+  width:64px; height:64px; border-radius:999px; border:none;
   background:linear-gradient(155deg,#e2571c,#b8420f); color:#fff;
-  font-size:24px; box-shadow:0 10px 24px -8px rgba(0,0,0,.6);
+  font-family:inherit; font-size:10.5px; font-weight:700; letter-spacing:.03em; line-height:1.15; text-align:center;
+  box-shadow:0 10px 24px -8px rgba(0,0,0,.6);
   display:flex; align-items:center; justify-content:center; cursor:pointer;
-">📻</button>
+  user-select:none; -webkit-user-select:none; touch-action:none; opacity:.6;
+  transition:opacity .2s ease, transform .1s ease;
+">HABLAR</button>
 
-<div id="walkieSheet" style="
-  position:fixed; inset:0; z-index:10000; display:none;
-  background:rgba(0,0,0,.55); align-items:flex-end; justify-content:center;
-">
-  <div style="width:100%; max-width:420px; background:#1a1c16; border-radius:18px 18px 0 0; overflow:hidden; max-height:88vh; display:flex; flex-direction:column;">
-    <div style="display:flex; align-items:center; justify-content:space-between; padding:10px 14px; border-bottom:1px solid #2a2c22;">
-      <span style="color:#e8e4d8; font-size:13px; font-weight:700; letter-spacing:.05em;">RADIO · RUTA</span>
-      <button id="walkieCloseBtn" aria-label="Cerrar radio" style="background:none; border:none; color:#e8e4d8; font-size:20px; cursor:pointer; padding:4px 8px;">✕</button>
-    </div>
-    <div style="flex:1; overflow:auto;">
-      <iframe id="walkieFrame" title="Radio de la ruta" style="border:0; width:100%; min-height:640px; display:block;"></iframe>
-    </div>
-  </div>
-</div>
+<iframe id="walkieFrame" title="Radio de la ruta" tabindex="-1" style="
+  position:fixed; left:-9999px; top:-9999px; width:1px; height:1px; border:0; opacity:0; pointer-events:none;
+"></iframe>
 
 <script>
 (function(){
-  var btn = document.getElementById('walkieToggleBtn');
-  var sheet = document.getElementById('walkieSheet');
-  var closeBtn = document.getElementById('walkieCloseBtn');
+  var btn = document.getElementById('walkiePttBtn');
   var frame = document.getElementById('walkieFrame');
-  var loaded = false;
-  function openSheet(){
-    if(!loaded){
-      var name = window.__rssWalkieName || 'Conductor';
-      frame.src = 'walkie-widget-test.html?role=passenger&name=' + encodeURIComponent(name);
-      loaded = true;
-    }
-    sheet.style.display = 'flex';
+  var loaded = false, pressed = false, pollReady = null;
+
+  function loadFrame(){
+    if(loaded) return;
+    loaded = true;
+    var name = window.__rssWalkieName || 'Conductor';
+    frame.src = 'walkie-widget-test.html?role=passenger&name=' + encodeURIComponent(name);
   }
-  function closeSheet(){ sheet.style.display = 'none'; }
-  btn.addEventListener('click', openSheet);
-  closeBtn.addEventListener('click', closeSheet);
-  sheet.addEventListener('click', function(e){ if(e.target === sheet) closeSheet(); });
+  function api(){
+    try { return frame.contentWindow && frame.contentWindow.RSSWalkie; } catch(e){ return null; }
+  }
+  function startPress(){
+    pressed = true;
+    btn.style.transform = 'scale(0.94)';
+    loadFrame();
+    var a = api();
+    if(a){ a.setTx(true); }
+    else {
+      clearInterval(pollReady);
+      pollReady = setInterval(function(){
+        var a2 = api();
+        if(a2){ clearInterval(pollReady); if(pressed) a2.setTx(true); }
+      }, 200);
+    }
+  }
+  function endPress(){
+    pressed = false;
+    btn.style.transform = 'scale(1)';
+    clearInterval(pollReady);
+    var a = api();
+    if(a) a.setTx(false);
+  }
+  btn.addEventListener('pointerdown', function(e){ e.preventDefault(); btn.setPointerCapture(e.pointerId); startPress(); });
+  btn.addEventListener('pointerup', endPress);
+  btn.addEventListener('pointercancel', endPress);
+  btn.addEventListener('pointerleave', function(e){ if(e.buttons === 1) endPress(); });
+
+  // Se ve apagado (gris) mientras conecta, y a todo color en cuanto ya está listo.
+  setInterval(function(){
+    var a = api();
+    btn.style.opacity = (a && a.getStatus().connected) ? '1' : '.6';
+  }, 1000);
 })();
 </script>
 
