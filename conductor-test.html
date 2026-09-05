@@ -1135,6 +1135,19 @@
     var name = window.__rssWalkieName || 'Conductor';
     frame.src = 'walkie-widget-test.html?role=passenger&name=' + encodeURIComponent(name);
   }
+  // Apaga el radio por completo (cierra la llamada, suelta el micrófono,
+  // deja de recibir/mandar audio) — se usa cuando el conductor apaga su
+  // ubicación (termina turno), para no seguir gastando datos/batería en
+  // segundo plano con el radio abierto sin que nadie lo esté usando. En
+  // cuanto vuelva a tocar HABLAR, se vuelve a conectar solo desde cero.
+  function unloadFrame(){
+    if(!loaded) return;
+    loaded = false;
+    clearInterval(pollReady);
+    frame.src = 'about:blank';
+    btn.style.opacity = '.6';
+  }
+  window.__rssWalkieStop = unloadFrame;
   function api(){
     try { return frame.contentWindow && frame.contentWindow.RSSWalkie; } catch(e){ return null; }
   }
