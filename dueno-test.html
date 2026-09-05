@@ -437,14 +437,32 @@
 <audio id="trackingAudio" src="https://actions.google.com/sounds/v1/emergency/emergency_siren_short_burst.ogg" loop preload="auto"></audio>
 
 
-<!-- ===== WALKIE-TALKIE (radio) — botón flotante ===== -->
-<button id="walkieToggleBtn" aria-label="Abrir radio" style="
+<!-- ===== WALKIE-TALKIE (radio) — botón de hablar directo, sin panel que abrir.
+     El dueño además necesita poder cambiar el código de la ruta y ver quién
+     está conectado, así que se queda un botoncito aparte para eso: abre el
+     mismo radio (sin duplicar la conexión) nada más para ese ajuste. ===== -->
+<button id="walkiePttBtn" aria-label="Hablar por radio" style="
   position:fixed; right:16px; bottom:16px; z-index:9999;
-  width:56px; height:56px; border-radius:999px; border:none;
+  width:64px; height:64px; border-radius:999px; border:none;
   background:linear-gradient(155deg,#e2571c,#b8420f); color:#fff;
-  font-size:24px; box-shadow:0 10px 24px -8px rgba(0,0,0,.6);
+  font-family:inherit; font-size:10.5px; font-weight:700; letter-spacing:.03em; line-height:1.15; text-align:center;
+  box-shadow:0 10px 24px -8px rgba(0,0,0,.6);
   display:flex; align-items:center; justify-content:center; cursor:pointer;
-">📻</button>
+  user-select:none; -webkit-user-select:none; touch-action:none; opacity:.6;
+  transition:opacity .2s ease, transform .1s ease;
+">HABLAR</button>
+
+<button id="walkieSettingsBtn" aria-label="Ajustes del radio (código, conectados)" style="
+  position:fixed; right:16px; bottom:86px; z-index:9999;
+  width:34px; height:34px; border-radius:999px; border:1px solid rgba(255,255,255,.15);
+  background:#2a2c22; color:#e8e4d8; font-size:15px;
+  box-shadow:0 6px 16px -6px rgba(0,0,0,.6);
+  display:flex; align-items:center; justify-content:center; cursor:pointer;
+">⚙️</button>
+
+<div id="walkieHidden" style="position:fixed; left:-9999px; top:-9999px; width:1px; height:1px; overflow:hidden;">
+  <iframe id="walkieFrame" title="Radio de la ruta" tabindex="-1" style="border:0; width:1px; height:1px; opacity:0; pointer-events:none;"></iframe>
+</div>
 
 <div id="walkieSheet" style="
   position:fixed; inset:0; z-index:10000; display:none;
@@ -455,31 +473,83 @@
       <span style="color:#e8e4d8; font-size:13px; font-weight:700; letter-spacing:.05em;">RADIO · RUTA</span>
       <button id="walkieCloseBtn" aria-label="Cerrar radio" style="background:none; border:none; color:#e8e4d8; font-size:20px; cursor:pointer; padding:4px 8px;">✕</button>
     </div>
-    <div style="flex:1; overflow:auto;">
-      <iframe id="walkieFrame" title="Radio de la ruta" style="border:0; width:100%; min-height:640px; display:block;"></iframe>
-    </div>
+    <div id="walkieSheetBody" style="flex:1; overflow:auto; min-height:640px;"></div>
   </div>
 </div>
 
 <script>
 (function(){
-  var btn = document.getElementById('walkieToggleBtn');
+  var pttBtn = document.getElementById('walkiePttBtn');
+  var settingsBtn = document.getElementById('walkieSettingsBtn');
+  var hiddenBox = document.getElementById('walkieHidden');
   var sheet = document.getElementById('walkieSheet');
+  var sheetBody = document.getElementById('walkieSheetBody');
   var closeBtn = document.getElementById('walkieCloseBtn');
   var frame = document.getElementById('walkieFrame');
-  var loaded = false;
-  function openSheet(){
-    if(!loaded){
-      var name = window.__rssWalkieName || 'Dueño';
-      frame.src = 'walkie-widget-test.html?role=admin&name=' + encodeURIComponent(name);
-      loaded = true;
+  var loaded = false, pressed = false, pollReady = null;
+
+  function loadFrame(){
+    if(loaded) return;
+    loaded = true;
+    var name = window.__rssWalkieName || 'Dueño';
+    frame.src = 'walkie-widget-test.html?role=admin&name=' + encodeURIComponent(name);
+  }
+  function api(){
+    try { return frame.contentWindow && frame.contentWindow.RSSWalkie; } catch(e){ return null; }
+  }
+  function startPress(){
+    pressed = true;
+    pttBtn.style.transform = 'scale(0.94)';
+    loadFrame();
+    var a = api();
+    if(a){ a.setTx(true); }
+    else {
+      clearInterval(pollReady);
+      pollReady = setInterval(function(){
+        var a2 = api();
+        if(a2){ clearInterval(pollReady); if(pressed) a2.setTx(true); }
+      }, 200);
     }
+  }
+  function endPress(){
+    pressed = false;
+    pttBtn.style.transform = 'scale(1)';
+    clearInterval(pollReady);
+    var a = api();
+    if(a) a.setTx(false);
+  }
+  pttBtn.addEventListener('pointerdown', function(e){ e.preventDefault(); pttBtn.setPointerCapture(e.pointerId); startPress(); });
+  pttBtn.addEventListener('pointerup', endPress);
+  pttBtn.addEventListener('pointercancel', endPress);
+  pttBtn.addEventListener('pointerleave', function(e){ if(e.buttons === 1) endPress(); });
+
+  setInterval(function(){
+    var a = api();
+    pttBtn.style.opacity = (a && a.getStatus().connected) ? '1' : '.6';
+  }, 1000);
+
+  // Ajustes: mete el mismo iframe (ya conectado) dentro del panel — no abre
+  // una segunda conexión, nada más lo hace visible un rato.
+  function openSettings(){
+    loadFrame();
+    frame.style.width = '100%';
+    frame.style.height = '640px';
+    frame.style.opacity = '1';
+    frame.style.pointerEvents = 'auto';
+    sheetBody.appendChild(frame);
     sheet.style.display = 'flex';
   }
-  function closeSheet(){ sheet.style.display = 'none'; }
-  btn.addEventListener('click', openSheet);
-  closeBtn.addEventListener('click', closeSheet);
-  sheet.addEventListener('click', function(e){ if(e.target === sheet) closeSheet(); });
+  function closeSettings(){
+    sheet.style.display = 'none';
+    frame.style.width = '1px';
+    frame.style.height = '1px';
+    frame.style.opacity = '0';
+    frame.style.pointerEvents = 'none';
+    hiddenBox.appendChild(frame);
+  }
+  settingsBtn.addEventListener('click', openSettings);
+  closeBtn.addEventListener('click', closeSettings);
+  sheet.addEventListener('click', function(e){ if(e.target === sheet) closeSettings(); });
 })();
 </script>
 
