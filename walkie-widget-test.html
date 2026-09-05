@@ -584,8 +584,19 @@
   }
 
   // ---------- Micrófono ----------
+  // mono + 16kHz: de sobra para voz clara, y le baja bastante el trabajo
+  // de codificar audio (menos CPU/batería) comparado con capturar en
+  // estéreo a 48kHz como hace el navegador por default.
   const micReady = new Promise((resolve) => {
-    navigator.mediaDevices.getUserMedia({ audio: { echoCancellation:true, noiseSuppression:true } })
+    navigator.mediaDevices.getUserMedia({
+      audio: {
+        echoCancellation: true,
+        noiseSuppression: true,
+        autoGainControl: true,
+        channelCount: 1,
+        sampleRate: 16000,
+      }
+    })
       .then(stream => {
         localStream = stream;
         localStream.getAudioTracks().forEach(t => t.enabled = false);
@@ -599,6 +610,28 @@
         resolve(false);
       });
   });
+
+  // ---------- Límite de bitrate de audio saliente ----------
+  // Por default, el navegador manda el audio de la llamada a bastante más
+  // bitrate del que hace falta para voz (puede irse hasta 32-64 kbps).
+  // Para radio no se necesita eso — con ~20 kbps mono se oye clarísimo y
+  // se manda mucho menos por los datos móviles, además de ahorrar CPU
+  // (menos trabajo de codificar = menos calor/batería). Se aplica a
+  // cualquier conexión de audio, sea la del dueño hacia cada pasajero o
+  // la del conductor/checador hacia el dueño.
+  function limitarBitrateSaliente(peerConnection, maxKbps = 20) {
+    if (!peerConnection || typeof peerConnection.getSenders !== 'function') return;
+    peerConnection.getSenders()
+      .filter((s) => s.track && s.track.kind === 'audio')
+      .forEach((sender) => {
+        try {
+          const params = sender.getParameters();
+          if (!params.encodings || !params.encodings.length) params.encodings = [{}];
+          params.encodings[0].maxBitrate = maxKbps * 1000;
+          sender.setParameters(params).catch(() => {});
+        } catch (e) { /* algunos navegadores viejos no soportan setParameters aquí; no pasa nada */ }
+      });
+  }
 
   // ================= DUEÑO DE RUTA (admin) =================
   function startAdmin(rawCode){
@@ -642,6 +675,7 @@
       const joinRole = meta.role === 'checker' ? 'checker' : 'passenger';
       const pid = call.peer;
       call.answer(broadcastDest.stream);
+      limitarBitrateSaliente(call.peerConnection);
       call.on('stream', remoteStream => {
         let audioEl = document.createElement('audio');
         audioEl.autoplay = true; audioEl.playsInline = true;
@@ -809,6 +843,7 @@
       const adminId = 'wt7admin-' + code.toLowerCase();
 
       adminCall = peer.call(adminId, localStream, { metadata: { name: myName, role: asRole } });
+      limitarBitrateSaliente(adminCall.peerConnection);
       adminDataConn = peer.connect(adminId);
 
       adminDataConn.on('open', () => adminDataConn.send({ type: 'name', name: myName, role: asRole }));
